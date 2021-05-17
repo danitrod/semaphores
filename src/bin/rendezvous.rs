@@ -1,4 +1,4 @@
-use semaphores::{check_occurrence_order, Semaphore};
+use semaphores::{OccurrenceOrder, Semaphore};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -40,15 +40,6 @@ fn main() {
     // b2
     t2_order.lock().unwrap().push("b2");
 
-    assert!(check_occurrence_order(
-        &t2_order.lock().unwrap(),
-        "a1",
-        "b2"
-    ));
-
-    assert!(check_occurrence_order(
-        &t2_order.lock().unwrap(),
-        "b1",
-        "a2"
-    ));
+    assert!(t2_order.lock().unwrap().check_occurrence_order("a1", "b2"));
+    assert!(t2_order.lock().unwrap().check_occurrence_order("b1", "a2"));
 }

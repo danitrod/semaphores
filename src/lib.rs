@@ -18,24 +18,32 @@ impl<T: PartialEq> OrderStatus<T> {
     }
 }
 
-pub fn check_occurrence_order<T: PartialEq>(order: &Vec<T>, first: T, second: T) -> bool {
-    order
-        .iter()
-        .fold(OrderStatus::Waiting(Vec::new()), |acc, v| match acc {
-            OrderStatus::Failed | OrderStatus::Ok => acc,
-            OrderStatus::Waiting(values) => {
-                if *v == first {
-                    OrderStatus::Ok
-                } else if *v == second {
-                    OrderStatus::Failed
-                } else {
-                    let mut new_values = values;
-                    new_values.push(v);
-                    OrderStatus::Waiting(new_values)
+pub trait OccurrenceOrder<T> {
+    fn check_occurrence_order(&self, first: T, second: T) -> bool;
+}
+
+impl<T: PartialEq> OccurrenceOrder<T> for Vec<T> {
+    /// Checks if given first argument occurs earlier than the second.
+    ///
+    /// Returns `false` if the first argument is not found.
+    fn check_occurrence_order(&self, first: T, second: T) -> bool {
+        self.iter()
+            .fold(OrderStatus::Waiting(Vec::new()), |acc, v| match acc {
+                OrderStatus::Failed | OrderStatus::Ok => acc,
+                OrderStatus::Waiting(values) => {
+                    if *v == first {
+                        OrderStatus::Ok
+                    } else if *v == second {
+                        OrderStatus::Failed
+                    } else {
+                        let mut new_values = values;
+                        new_values.push(v);
+                        OrderStatus::Waiting(new_values)
+                    }
                 }
-            }
-        })
-        .is_ok()
+            })
+            .is_ok()
+    }
 }
 
 #[derive(Clone)]
@@ -78,6 +86,7 @@ mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
     use std::{thread, time};
+
     #[test]
     fn semaphores() {
         let mut sem = Semaphore::new(&mut 0);
@@ -112,7 +121,16 @@ mod tests {
 
     #[test]
     fn vec_ordering() {
-        assert!(check_occurrence_order(&vec![5, 4, 3], 5, 3));
-        assert!(check_occurrence_order(&vec!["c1", "b1", "a1"], "c1", "a1"));
+        // Correct order with number
+        assert!(vec![5, 4, 3].check_occurrence_order(5, 3));
+
+        // Wrong order
+        assert!(!vec!["c1", "b1", "a1"].check_occurrence_order("a1", "c1"));
+
+        // Correct order with string
+        assert!(vec!["c1", "b1", "a1"].check_occurrence_order("c1", "a1"));
+
+        // Not found
+        assert!(!vec!["c1", "b1", "a1"].check_occurrence_order("z", "p"));
     }
 }
