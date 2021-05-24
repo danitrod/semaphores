@@ -17,8 +17,8 @@ impl<T: PartialEq> OccurrenceOrder<T> for Vec<T> {
             if *val == second {
                 if found_first {
                     found_second = true;
-                    break;
                 }
+                break;
             }
         }
 
