@@ -1,48 +1,28 @@
-/*
-! Warning!
-This Semaphore implementation is not ready for production use.
-
-Cloning a raw pointer may not work when compiling with optimizations.
-*/
-
-#[derive(PartialEq)]
-enum OrderStatus<T: PartialEq> {
-    Waiting(Vec<T>),
-    Failed,
-    Ok,
-}
-
-impl<T: PartialEq> OrderStatus<T> {
-    pub fn is_ok(self) -> bool {
-        self == OrderStatus::Ok
-    }
-}
-
 pub trait OccurrenceOrder<T> {
+    /// Checks if given first argument occurs earlier than the second.
+    ///
+    /// Returns `false` if the first argument is not found.
     fn check_occurrence_order(&self, first: T, second: T) -> bool;
 }
 
 impl<T: PartialEq> OccurrenceOrder<T> for Vec<T> {
-    /// Checks if given first argument occurs earlier than the second.
-    ///
-    /// Returns `false` if the first argument is not found.
     fn check_occurrence_order(&self, first: T, second: T) -> bool {
-        self.iter()
-            .fold(OrderStatus::Waiting(Vec::new()), |acc, v| match acc {
-                OrderStatus::Failed | OrderStatus::Ok => acc,
-                OrderStatus::Waiting(values) => {
-                    if *v == first {
-                        OrderStatus::Ok
-                    } else if *v == second {
-                        OrderStatus::Failed
-                    } else {
-                        let mut new_values = values;
-                        new_values.push(v);
-                        OrderStatus::Waiting(new_values)
-                    }
+        let mut found_first = false;
+        let mut found_second = false;
+
+        for val in self.iter() {
+            if *val == first {
+                found_first = true;
+            }
+            if *val == second {
+                if found_first {
+                    found_second = true;
+                    break;
                 }
-            })
-            .is_ok()
+            }
+        }
+
+        return found_second;
     }
 }
 
@@ -50,6 +30,10 @@ impl<T: PartialEq> OccurrenceOrder<T> for Vec<T> {
 struct RawPtrSend(*mut i32);
 unsafe impl Send for RawPtrSend {}
 
+/// **Warning!**
+/// This Semaphore implementation is not ready for production use.
+///
+/// It contains unsafe code that may cause unexpected behavior.
 #[derive(Clone)]
 pub struct Semaphore {
     value: RawPtrSend,
